@@ -2,6 +2,7 @@ package com.mygame.flappybird;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
@@ -13,6 +14,8 @@ import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Rectangle;
 
 import java.util.Random;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
 
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.show;
 
@@ -35,7 +38,7 @@ public class Flappybird extends ApplicationAdapter {
 	float gap = 400;
 	float maxgapoffset = 0;
 	Random randomGenerator;
-	float tubevelocity = 4;
+	float tubevelocity = 6;
 	int numberoftubes = 4;
 	int score = 0;
 	int scoringtube=0;
@@ -46,6 +49,15 @@ public class Flappybird extends ApplicationAdapter {
 	Rectangle[] bottomrectangle;
 	boolean collision = false;
 	BitmapFont font;
+	Integer highscore;
+	BitmapFont highfont;
+	BitmapFont writescore;
+	Handler handler;
+
+
+	//get a preferences instance
+	Preferences prefs ;
+
 
 	@Override
 	public void create() {
@@ -61,15 +73,27 @@ public class Flappybird extends ApplicationAdapter {
 		font = new BitmapFont();
 		font.setColor(Color.WHITE);
 		font.getData().setScale(10);
+		highfont = new BitmapFont();
+		highfont.setColor(Color.WHITE);
+		highfont.getData().setScale(10);
+		writescore = new BitmapFont();
+		writescore.setColor(Color.WHITE);
+		writescore.getData().setScale(5);
 		toprectangle = new Rectangle[4];
 		bottomrectangle = new Rectangle[4];
 		birdimg[0] = bird;
 		birdimg[1] = bird2;
+		prefs = Gdx.app.getPreferences("Storage");
+		highscore = prefs.getInteger("highscore");
+		if(highscore == null)
+			highscore = 0;
+
 		//gap = new Random().nextInt(1000) + 200;
 
 		maxgapoffset = Gdx.graphics.getHeight() / 2 - gap / 2 - 100;
 		randomGenerator = new Random();
 		distancebetweentube = Gdx.graphics.getWidth() * (0.6f);
+
 		startGame();
 	}
 	public void startGame(){
@@ -85,10 +109,12 @@ public class Flappybird extends ApplicationAdapter {
 	}
 	@Override
 	public void render() {
+		int i=0;
+		//highscore = prefs.getInteger("highscore");
 		batch.begin();
 		batch.draw(background, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 		if (gamestate == 1) {
-			if(tubeX[scoringtube] < Gdx.graphics.getWidth() / 2){
+			if(tubeX[scoringtube] < Gdx.graphics.getWidth() / 2 - toptube.getWidth()){
 				score++;
 				Gdx.app.log("score ", String.valueOf(score));
 				if(scoringtube < numberoftubes - 1){
@@ -98,9 +124,9 @@ public class Flappybird extends ApplicationAdapter {
 				}
 			}
 			if (Gdx.input.isTouched() ) {
-				velocity = -13;
+				velocity = -16;
 			}
-			for (int i = 0; i < numberoftubes; i++) {
+			for (i = 0; i < numberoftubes; i++) {
 				if (tubeX[i] < -toptube.getWidth()) {
 					tubeX[i] += numberoftubes * distancebetweentube;
 					tubeoffset[i] = (randomGenerator.nextFloat() - 0.5f) * (Gdx.graphics.getHeight() - gap - 200);
@@ -125,7 +151,23 @@ public class Flappybird extends ApplicationAdapter {
 				}
 			}
 			else if(gamestate == 2){
+			if(highscore == 0){
+				//prefs.putInteger("highscore",score);
+				highscore = score;
+			}else{
+				if(score > highscore)
+					//prefs.flush();
+					highscore = score;
+					//prefs.putInteger("highscore", highscore);
+			}
+			//int print = prefs.getInteger("highscore");
+			Gdx.app.log("highscore is"," "+highscore);
+
+			batch.draw(birdimg[flapstate], Gdx.graphics.getWidth() / 2 - bird.getWidth() / 2, birdY);
+			batch.draw(toptube, tubeX[i], Gdx.graphics.getHeight() / 2 + gap / 2 + tubeoffset[i]);
+			batch.draw(bottomtube, tubeX[i], Gdx.graphics.getHeight() / 2 - gap / 2 - bottomtube.getHeight() + tubeoffset[i]);
 			batch.draw(gameover,Gdx.graphics.getWidth()/2-gameover.getWidth()/2, Gdx.graphics.getHeight()/2-gameover.getHeight()/2);
+			//raw(, String.valueOf(highscore),Gdx.graphics.getWidth()/2,Gdx.graphics.getHeight()*0.9f);
 			if (Gdx.input.isTouched()) {
 				gamestate = 1;
 				startGame();
@@ -139,31 +181,36 @@ public class Flappybird extends ApplicationAdapter {
 			} else {
 				flapstate = 0;
 			}
+			if(gamestate != 2)
 			batch.draw(birdimg[flapstate], Gdx.graphics.getWidth() / 2 - bird.getWidth() / 2, birdY);
 			font.draw(batch, String.valueOf(score), 100, 200);
+			writescore.draw(batch,"High Score",Gdx.graphics.getWidth()-400,300);
+			highfont.draw(batch, String.valueOf(highscore), Gdx.graphics.getWidth()-200,200);
 			batch.end();
-			birdCircle.set(Gdx.graphics.getWidth() / 2, birdY + birdimg[flapstate].getHeight() / 2, birdimg[flapstate].getWidth() / 2);
+			birdCircle.set(Gdx.graphics.getWidth() / 2, birdY + birdimg[flapstate].getHeight() / 2, birdimg[flapstate].getWidth() * 0.4f);
 			//shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 			//shapeRenderer.setColor(Color.RED);
 			//shapeRenderer.circle(birdCircle.x,birdCircle.y,birdCircle.radius);
-			for (int i = 0; i < numberoftubes; i++) {
+			for (int j = 0; j < numberoftubes; j++) {
 				//shapeRenderer.rect(tubeX[i], Gdx.graphics.getHeight() / 2 + gap / 2 + tubeoffset[i],toptube.getWidth(),toptube.getHeight());
 				//shapeRenderer.rect(tubeX[i], Gdx.graphics.getHeight() / 2 - gap / 2 - bottomtube.getHeight() + tubeoffset[i],bottomtube.getWidth(),bottomtube.getHeight());
-				if (Intersector.overlaps(birdCircle, toprectangle[i]) || Intersector.overlaps(birdCircle, bottomrectangle[i])) {
+				if (Intersector.overlaps(birdCircle, toprectangle[j]) || Intersector.overlaps(birdCircle, bottomrectangle[j])) {
 					collision = true;
+
 					gamestate = 2;
-
-
-					//android.widget.Toast.makeText(this, "Collision", Toast.LENGTH_SHORT).show();
-					//an droid.widget.Toast.makeText(this, "Your Score is", Toast.LENGTH_SHORT).show()
+					
 				}
 
 			}
 			//shapeRenderer.end();
 	}
+
+
+
 		@Override
 		public void dispose () {
 			batch.dispose();
 			background.dispose();
 		}
+
 	}
